@@ -1,0 +1,1318 @@
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
+-- Check if already loaded
+if LocalPlayer.PlayerGui:FindFirstChild("VulnExploitGUI") then
+    LocalPlayer.PlayerGui:FindFirstChild("VulnExploitGUI"):Destroy()
+end
+
+-- Create GUI
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "VulnExploitGUI"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent = LocalPlayer.PlayerGui
+
+-- Main Frame
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 500, 0, 600)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -300)
+MainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
+MainFrame.BorderSizePixel = 2
+MainFrame.BorderColor3 = Color3.fromRGB(255, 50, 50)
+MainFrame.Active = true
+MainFrame.Draggable = true
+MainFrame.Parent = ScreenGui
+
+-- UICorner
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 10)
+Corner.Parent = MainFrame
+
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 10)
+TitleCorner.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -100, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "🔴 Vulnerability Exploit Hub"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.TextSize = 18
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.Parent = TitleBar
+
+-- Close Button
+local CloseButton = Instance.new("TextButton")
+CloseButton.Name = "CloseButton"
+CloseButton.Size = UDim2.new(0, 30, 0, 30)
+CloseButton.Position = UDim2.new(1, -35, 0, 5)
+CloseButton.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+CloseButton.Text = "X"
+CloseButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+CloseButton.TextSize = 16
+CloseButton.Font = Enum.Font.GothamBold
+CloseButton.Parent = TitleBar
+
+local CloseCorner = Instance.new("UICorner")
+CloseCorner.CornerRadius = UDim.new(0, 5)
+CloseCorner.Parent = CloseButton
+
+CloseButton.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+-- Minimize Button
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Name = "MinimizeButton"
+MinimizeButton.Size = UDim2.new(0, 30, 0, 30)
+MinimizeButton.Position = UDim2.new(1, -70, 0, 5)
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+MinimizeButton.Text = "-"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.TextSize = 20
+MinimizeButton.Font = Enum.Font.GothamBold
+MinimizeButton.Parent = TitleBar
+
+local MinCorner = Instance.new("UICorner")
+MinCorner.CornerRadius = UDim.new(0, 5)
+MinCorner.Parent = MinimizeButton
+
+local minimized = false
+MinimizeButton.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        MainFrame:TweenSize(UDim2.new(0, 500, 0, 40), "Out", "Quad", 0.3, true)
+        MinimizeButton.Text = "+"
+    else
+        MainFrame:TweenSize(UDim2.new(0, 500, 0, 600), "Out", "Quad", 0.3, true)
+        MinimizeButton.Text = "-"
+    end
+end)
+
+-- ScrollingFrame for content
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Name = "ScrollFrame"
+ScrollFrame.Size = UDim2.new(1, -20, 1, -60)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 50)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.ScrollBarThickness = 6
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, 1500)
+ScrollFrame.Parent = MainFrame
+
+-- Helper function to create sections
+local yOffset = 10
+local function createSection(title)
+    local section = Instance.new("Frame")
+    section.Name = title
+    section.Size = UDim2.new(1, -10, 0, 35)
+    section.Position = UDim2.new(0, 5, 0, yOffset)
+    section.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+    section.BorderSizePixel = 0
+    section.Parent = ScrollFrame
+    
+    local sectionCorner = Instance.new("UICorner")
+    sectionCorner.CornerRadius = UDim.new(0, 8)
+    sectionCorner.Parent = section
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -10, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = title
+    label.TextColor3 = Color3.fromRGB(255, 200, 50)
+    label.TextSize = 14
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Font = Enum.Font.GothamBold
+    label.Parent = section
+    
+    yOffset = yOffset + 45
+    return section
+end
+
+-- Helper function to create buttons
+local function createButton(text, callback, parent)
+    local button = Instance.new("TextButton")
+    button.Name = text
+    button.Size = UDim2.new(1, -10, 0, 35)
+    button.Position = UDim2.new(0, 5, 0, yOffset)
+    button.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+    button.Text = text
+    button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    button.TextSize = 12
+    button.Font = Enum.Font.Gotham
+    button.Parent = parent or ScrollFrame
+    
+    local btnCorner = Instance.new("UICorner")
+    btnCorner.CornerRadius = UDim.new(0, 6)
+    btnCorner.Parent = button
+    
+    button.MouseButton1Click:Connect(callback)
+    
+    -- Hover effect
+    button.MouseEnter:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(90, 90, 100)
+    end)
+    button.MouseLeave:Connect(function()
+        button.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+    end)
+    
+    yOffset = yOffset + 45
+    return button
+end
+
+-- Helper function to create toggles
+local function createToggle(text, callback)
+    local toggleFrame = Instance.new("Frame")
+    toggleFrame.Size = UDim2.new(1, -10, 0, 35)
+    toggleFrame.Position = UDim2.new(0, 5, 0, yOffset)
+    toggleFrame.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+    toggleFrame.BorderSizePixel = 0
+    toggleFrame.Parent = ScrollFrame
+    
+    local toggleCorner = Instance.new("UICorner")
+    toggleCorner.CornerRadius = UDim.new(0, 6)
+    toggleCorner.Parent = toggleFrame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -60, 1, 0)
+    label.Position = UDim2.new(0, 10, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 12
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Font = Enum.Font.Gotham
+    label.Parent = toggleFrame
+    
+    local toggle = Instance.new("TextButton")
+    toggle.Size = UDim2.new(0, 45, 0, 25)
+    toggle.Position = UDim2.new(1, -50, 0.5, -12.5)
+    toggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+    toggle.Text = "OFF"
+    toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    toggle.TextSize = 10
+    toggle.Font = Enum.Font.GothamBold
+    toggle.Parent = toggleFrame
+    
+    local toggleCorner2 = Instance.new("UICorner")
+    toggleCorner2.CornerRadius = UDim.new(0, 5)
+    toggleCorner2.Parent = toggle
+    
+    local isOn = false
+    toggle.MouseButton1Click:Connect(function()
+        isOn = not isOn
+        if isOn then
+            toggle.BackgroundColor3 = Color3.fromRGB(50, 200, 50)
+            toggle.Text = "ON"
+        else
+            toggle.BackgroundColor3 = Color3.fromRGB(200, 50, 50)
+            toggle.Text = "OFF"
+        end
+        callback(isOn)
+    end)
+    
+    yOffset = yOffset + 45
+    return toggleFrame, toggle
+end
+
+-- Helper function to create sliders
+local function createSlider(text, min, max, default, callback)
+    local sliderFrame = Instance.new("Frame")
+    sliderFrame.Size = UDim2.new(1, -10, 0, 50)
+    sliderFrame.Position = UDim2.new(0, 5, 0, yOffset)
+    sliderFrame.BackgroundColor3 = Color3.fromRGB(70, 70, 80)
+    sliderFrame.BorderSizePixel = 0
+    sliderFrame.Parent = ScrollFrame
+    
+    local sliderCorner = Instance.new("UICorner")
+    sliderCorner.CornerRadius = UDim.new(0, 6)
+    sliderCorner.Parent = sliderFrame
+    
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -20, 0, 20)
+    label.Position = UDim2.new(0, 10, 0, 5)
+    label.BackgroundTransparency = 1
+    label.Text = text .. ": " .. default
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextSize = 11
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Font = Enum.Font.Gotham
+    label.Parent = sliderFrame
+    
+    local sliderBG = Instance.new("Frame")
+    sliderBG.Size = UDim2.new(1, -20, 0, 6)
+    sliderBG.Position = UDim2.new(0, 10, 0, 30)
+    sliderBG.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    sliderBG.BorderSizePixel = 0
+    sliderBG.Parent = sliderFrame
+    
+    local sliderBGCorner = Instance.new("UICorner")
+    sliderBGCorner.CornerRadius = UDim.new(0, 3)
+    sliderBGCorner.Parent = sliderBG
+    
+    local sliderFill = Instance.new("Frame")
+    sliderFill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    sliderFill.BackgroundColor3 = Color3.fromRGB(255, 50, 50)
+    sliderFill.BorderSizePixel = 0
+    sliderFill.Parent = sliderBG
+    
+    local sliderFillCorner = Instance.new("UICorner")
+    sliderFillCorner.CornerRadius = UDim.new(0, 3)
+    sliderFillCorner.Parent = sliderFill
+    
+    local dragging = false
+    local currentValue = default
+    
+    local function updateSlider(input)
+        local relativeX = math.clamp((input.Position.X - sliderBG.AbsolutePosition.X) / sliderBG.AbsoluteSize.X, 0, 1)
+        currentValue = math.floor(min + (max - min) * relativeX)
+        sliderFill.Size = UDim2.new(relativeX, 0, 1, 0)
+        label.Text = text .. ": " .. currentValue
+        callback(currentValue)
+    end
+    
+    sliderBG.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = true
+            updateSlider(input)
+        end
+    end)
+    
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider(input)
+        end
+    end)
+    
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragging = false
+        end
+    end)
+    
+    yOffset = yOffset + 60
+    return sliderFrame
+end
+
+-- Status label
+local StatusLabel = Instance.new("TextLabel")
+StatusLabel.Size = UDim2.new(1, -20, 0, 25)
+StatusLabel.Position = UDim2.new(0, 10, 1, -30)
+StatusLabel.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+StatusLabel.BorderSizePixel = 0
+StatusLabel.Text = "Status: Ready"
+StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+StatusLabel.TextSize = 11
+StatusLabel.Font = Enum.Font.Gotham
+StatusLabel.Parent = MainFrame
+
+local StatusCorner = Instance.new("UICorner")
+StatusCorner.CornerRadius = UDim.new(0, 5)
+StatusCorner.Parent = StatusLabel
+
+-- Helper function to update status
+local function updateStatus(text, color)
+    StatusLabel.Text = "Status: " .. text
+    StatusLabel.TextColor3 = color or Color3.fromRGB(100, 255, 100)
+    task.delay(3, function()
+        if StatusLabel then
+            StatusLabel.Text = "Status: Ready"
+            StatusLabel.TextColor3 = Color3.fromRGB(100, 255, 100)
+        end
+    end)
+end
+
+-- Get Events
+local Events
+local success, err = pcall(function()
+    Events = ReplicatedStorage:WaitForChild("Events", 2)
+end)
+
+if not Events then
+    updateStatus("Events folder not found!", Color3.fromRGB(255, 100, 100))
+end
+
+-- ===================================
+-- SECTION 1: CLIENT-SIDE AUTHORITY EXPLOITS
+-- ===================================
+createSection("🔴 1. Client Authority Exploits")
+
+-- Infinite Range
+local infiniteRange = false
+createToggle("Infinite Reach/Range", function(state)
+    infiniteRange = state
+    updateStatus(state and "Infinite Range ON" or "Infinite Range OFF", 
+        state and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(100, 255, 100))
+    
+    if state and LocalPlayer.Character then
+        -- Hook character attributes
+        local char = LocalPlayer.Character
+        if char:FindFirstChild("EquippedFace") then
+            char.EquippedFace:SetAttribute("RangeMultiplier", 999999)
+        end
+        if char:FindFirstChild("EquippedHand") then
+            char.EquippedHand:SetAttribute("RangeMultiplier", 999999)
+        end
+    end
+end)
+
+-- Remove Cooldown
+createToggle("Remove All Cooldowns", function(state)
+    if state then
+        local connection
+        connection = RunService.Heartbeat:Connect(function()
+            if LocalPlayer.Character then
+                LocalPlayer.Character:SetAttribute("LocalCooldown", nil)
+                if not state then
+                    connection:Disconnect()
+                end
+            end
+        end)
+        updateStatus("Cooldowns Removed", Color3.fromRGB(255, 100, 100))
+    else
+        updateStatus("Cooldown Removal OFF", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+-- Spam Events
+local spamming = false
+local spamDelay = 0.1
+createToggle("Spam Place Blocks", function(state)
+    spamming = state
+    if state and Events then
+        task.spawn(function()
+            while spamming do
+                pcall(function()
+                    local RequestPlaceBlock = Events:FindFirstChild("RequestPlaceBlock")
+                    if RequestPlaceBlock and LocalPlayer.Character then
+                        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                        if hrp then
+                            -- Spam random positions around player
+                            local randomPos = hrp.Position + Vector3.new(
+                                math.random(-10, 10),
+                                math.random(-5, 5),
+                                math.random(-10, 10)
+                            )
+                            RequestPlaceBlock:FireServer(randomPos, "SomeBlock")
+                        end
+                    end
+                end)
+                task.wait(spamDelay)
+            end
+        end)
+        updateStatus("Spam Active", Color3.fromRGB(255, 100, 100))
+    else
+        updateStatus("Spam Stopped", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+createSlider("Spam Speed (delay)", 0, 1, 0.1, function(value)
+    spamDelay = value / 10
+end)
+
+-- ===================================
+-- SECTION 2: ADMIN BYPASS
+-- ===================================
+createSection("👑 2. Admin Bypass Exploits")
+
+createButton("Force Admin Status (Client)", function()
+    updateStatus("Attempting Admin Bypass...", Color3.fromRGB(255, 200, 50))
+    
+    -- Try to hook IsPlayerOwnerOrAdmin function
+    local success = pcall(function()
+        local worldData = workspace:FindFirstChild("WorldData")
+        if worldData then
+            local worldOwner = worldData:FindFirstChild("WorldOwner")
+            if worldOwner then
+                worldOwner.Value = LocalPlayer.Name
+                updateStatus("Set as World Owner (Client)", Color3.fromRGB(255, 100, 100))
+            end
+        end
+    end)
+    
+    if not success then
+        updateStatus("Admin Bypass Failed", Color3.fromRGB(255, 50, 50))
+    end
+end)
+
+createButton("Spam Admin Actions", function()
+    if not Events then return end
+    
+    updateStatus("Spamming Admin Events...", Color3.fromRGB(255, 100, 100))
+    
+    for i = 1, 50 do
+        pcall(function()
+            local RequestWrench = Events:FindFirstChild("RequestWrench")
+            if RequestWrench then
+                RequestWrench:FireServer("AdminAction", true)
+            end
+        end)
+        task.wait(0.05)
+    end
+    
+    updateStatus("Admin Spam Complete", Color3.fromRGB(100, 255, 100))
+end)
+
+-- ===================================
+-- SECTION 3: RAYCAST MANIPULATION
+-- ===================================
+createSection("🎯 3. Raycast & Detection Bypass")
+
+createToggle("Click Through Walls", function(state)
+    if state then
+        -- Hook workspace:Raycast
+        local oldRaycast = workspace.Raycast
+        workspace.Raycast = function(self, origin, direction, params)
+            -- Return fake result at max range
+            return {
+                Instance = workspace,
+                Position = origin + (direction.Unit * 999),
+                Normal = Vector3.new(0, 1, 0),
+                Distance = 999
+            }
+        end
+        updateStatus("Wallhack Raycast ON", Color3.fromRGB(255, 100, 100))
+    else
+        updateStatus("Raycast Normal", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+createToggle("Bypass GUI Detection", function(state)
+    if state and LocalPlayer.PlayerGui then
+        -- Make all GUI transparent or remove them
+        for _, gui in pairs(LocalPlayer.PlayerGui:GetDescendants()) do
+            if gui:IsA("Frame") or gui:IsA("ImageButton") then
+                pcall(function()
+                    gui.BackgroundTransparency = 1
+                end)
+            end
+        end
+        updateStatus("GUI Bypass Active", Color3.fromRGB(255, 100, 100))
+    else
+        updateStatus("GUI Normal", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+-- ===================================
+-- SECTION 4: ANIMATION & FACE SPAM
+-- ===================================
+createSection("😈 4. Face Animation Exploits")
+
+local faceSpamming = false
+createToggle("Spam Face Animations", function(state)
+    faceSpamming = state
+    if state and Events then
+        task.spawn(function()
+            local AnimateFace = Events:FindFirstChild("AnimateFace")
+            if not AnimateFace then return end
+            
+            local faces = {
+                "rbxassetid://53769373",
+                "rbxassetid://20418518",
+                "rbxassetid://67493660",
+                "rbxassetid://105880745"
+            }
+            
+            while faceSpamming do
+                pcall(function()
+                    AnimateFace:FireServer(faces[math.random(1, #faces)])
+                end)
+                task.wait(0.01) -- Super fast spam
+            end
+        end)
+        updateStatus("Face Spam ON", Color3.fromRGB(255, 100, 100))
+    else
+        updateStatus("Face Spam OFF", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+-- ===================================
+-- SECTION 5: INPUT MANIPULATION
+-- ===================================
+createSection("🖱️ 5. Input Manipulation")
+
+local autoClicking = false
+createToggle("Auto-Clicker", function(state)
+    autoClicking = state
+    if state then
+        task.spawn(function()
+            while autoClicking do
+                pcall(function()
+                    -- Simulate mouse click
+                    local VirtualInputManager = game:GetService("VirtualInputManager")
+                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, true, game, 0)
+                    task.wait(0.01)
+                    VirtualInputManager:SendMouseButtonEvent(0, 0, 0, false, game, 0)
+                end)
+                task.wait(0.05)
+            end
+        end)
+        updateStatus("Auto-Clicker ON", Color3.fromRGB(255, 100, 100))
+    else
+        updateStatus("Auto-Clicker OFF", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+createButton("Bypass Mobile Touch Detection", function()
+    updateStatus("Touch Detection Bypassed", Color3.fromRGB(255, 100, 100))
+    
+    -- Modify camera viewport
+    if workspace.CurrentCamera then
+        local cam = workspace.CurrentCamera
+        pcall(function()
+            cam.ViewportSize = Vector2.new(99999, 99999)
+        end)
+    end
+end)
+
+-- ===================================
+-- SECTION 6: BLOCK MANIPULATION
+-- ===================================
+createSection("🧱 6. Block & World Manipulation")
+
+createButton("Mass Place Blocks (Lag)", function()
+    if not Events then return end
+    updateStatus("Mass Placing Blocks...", Color3.fromRGB(255, 200, 50))
+    
+    local RequestPlaceBlock = Events:FindFirstChild("RequestPlaceBlock")
+    if RequestPlaceBlock and LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            for x = -20, 20, 3 do
+                for y = -20, 20, 3 do
+                    for z = -20, 20, 3 do
+                        pcall(function()
+                            RequestPlaceBlock:FireServer(
+                                hrp.Position + Vector3.new(x, y, z),
+                                "Block"
+                            )
+                        end)
+                    end
+                end
+            end
+            updateStatus("Mass Place Complete!", Color3.fromRGB(100, 255, 100))
+        end
+    end
+end)
+
+createButton("Destroy All Nearby Blocks", function()
+    if not Events then return end
+    updateStatus("Destroying Blocks...", Color3.fromRGB(255, 100, 100))
+    
+    local PunchBlock = Events:FindFirstChild("PunchBlock")
+    if PunchBlock and LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            -- Find all blocks near player
+            local region = Region3.new(hrp.Position - Vector3.new(50, 50, 50), hrp.Position + Vector3.new(50, 50, 50))
+            region = region:ExpandToGrid(4)
+            
+            for _, part in pairs(workspace:FindPartsInRegion3(region, nil, 100)) do
+                pcall(function()
+                    if part.Parent:IsA("Model") then
+                        PunchBlock:FireServer(part.Parent)
+                    end
+                end)
+                task.wait()
+            end
+            updateStatus("Destruction Complete!", Color3.fromRGB(100, 255, 100))
+        end
+    end
+end)
+
+-- ===================================
+-- SECTION 7: EXPLOIT UTILITIES
+-- ===================================
+createSection("🛠️ 7. Utility Functions")
+
+createButton("Teleport to Mouse Position", function()
+    if LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        local mouse = LocalPlayer:GetMouse()
+        if hrp and mouse.Hit then
+            hrp.CFrame = CFrame.new(mouse.Hit.Position + Vector3.new(0, 3, 0))
+            updateStatus("Teleported!", Color3.fromRGB(100, 255, 100))
+        end
+    end
+end)
+
+createButton("Noclip (Toggle)", function()
+    local noclipping = false
+    if LocalPlayer.Character then
+        noclipping = not noclipping
+        local connection
+        connection = RunService.Stepped:Connect(function()
+            if noclipping and LocalPlayer.Character then
+                for _, part in pairs(LocalPlayer.Character:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            else
+                if connection then connection:Disconnect() end
+            end
+        end)
+        updateStatus(noclipping and "Noclip ON" or "Noclip OFF", 
+            noclipping and Color3.fromRGB(255, 100, 100) or Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+createButton("Remove All Fog/Effects", function()
+    pcall(function()
+        game.Lighting.FogEnd = 999999
+        game.Lighting.Brightness = 2
+        for _, effect in pairs(game.Lighting:GetChildren()) do
+            if effect:IsA("Atmosphere") or effect:IsA("BlurEffect") or effect:IsA("ColorCorrectionEffect") then
+                effect:Destroy()
+            end
+        end
+        updateStatus("Fog Removed!", Color3.fromRGB(100, 255, 100))
+    end)
+end)
+
+createButton("Walkspeed Boost (16 -> 100)", function()
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 100
+            updateStatus("Speed Boosted!", Color3.fromRGB(100, 255, 100))
+        end
+    end
+end)
+
+-- ===================================
+-- SECTION 8: ADVANCED EXPLOITS
+-- ===================================
+createSection("⚡ 8. Advanced Techniques")
+
+createButton("Exploit All Vulnerabilities", function()
+    updateStatus("Activating All Exploits...", Color3.fromRGB(255, 50, 50))
+    
+    -- Remove cooldowns
+    if LocalPlayer.Character then
+        LocalPlayer.Character:SetAttribute("LocalCooldown", nil)
+    end
+    
+    -- Set infinite range
+    if LocalPlayer.Character then
+        local char = LocalPlayer.Character
+        if char:FindFirstChild("EquippedFace") then
+            char.EquippedFace:SetAttribute("RangeMultiplier", 999999)
+        end
+        if char:FindFirstChild("EquippedHand") then
+            char.EquippedHand:SetAttribute("RangeMultiplier", 999999)
+        end
+    end
+    
+    -- Speed boost
+    if LocalPlayer.Character then
+        local humanoid = LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+        if humanoid then
+            humanoid.WalkSpeed = 100
+        end
+    end
+    
+    -- Remove fog
+    pcall(function()
+        game.Lighting.FogEnd = 999999
+    end)
+    
+    updateStatus("ALL EXPLOITS ACTIVE!", Color3.fromRGB(255, 0, 0))
+    
+    -- Continuous exploit maintenance
+    task.spawn(function()
+        while task.wait(1) do
+            pcall(function()
+                if LocalPlayer.Character then
+                    LocalPlayer.Character:SetAttribute("LocalCooldown", nil)
+                end
+            end)
+        end
+    end)
+end)
+
+createButton("Lag Server (Spam All Events)", function()
+    updateStatus("⚠️ LAGGING SERVER...", Color3.fromRGB(255, 0, 0))
+    
+    task.spawn(function()
+        for i = 1, 1000 do
+            pcall(function()
+                if Events then
+                    for _, event in pairs(Events:GetChildren()) do
+                        if event:IsA("RemoteEvent") then
+                            event:FireServer("SPAM", math.random(), {}, true, Vector3.new())
+                        end
+                    end
+                end
+            end)
+            task.wait()
+        end
+        updateStatus("Server Lag Complete", Color3.fromRGB(100, 255, 100))
+    end)
+end)
+
+createButton("Hook All RemoteEvents", function()
+    local hooked = {}
+    for _, event in pairs(ReplicatedStorage:GetDescendants()) do
+        if event:IsA("RemoteEvent") and not hooked[event] then
+            hooked[event] = true
+            local oldFireServer = event.FireServer
+            event.FireServer = function(self, ...)
+                print("🔴 [HOOKED]", event:GetFullName(), "fired with args:", ...)
+                return oldFireServer(self, ...)
+            end
+        end
+    end
+    updateStatus("All RemoteEvents Hooked!", Color3.fromRGB(255, 200, 50))
+end)
+
+-- ===================================
+-- SECTION 9: ITEM & INVENTORY EXPLOITS
+-- ===================================
+createSection("🎒 9. Item & Inventory Exploits")
+
+createButton("Unlock All Items (Client)", function()
+    updateStatus("Attempting Item Unlock...", Color3.fromRGB(255, 200, 50))
+    
+    pcall(function()
+        local BlockModule = require(ReplicatedStorage.Modules:WaitForChild("BlockModule"))
+        if BlockModule and BlockModule.blocks then
+            for itemName, itemData in pairs(BlockModule.blocks) do
+                -- Try to give item locally
+                if LocalPlayer:FindFirstChild("LastSelectedItem") then
+                    LocalPlayer.LastSelectedItem.Value = itemName
+                    updateStatus("Selected: " .. itemName, Color3.fromRGB(100, 255, 100))
+                    break
+                end
+            end
+        end
+    end)
+end)
+
+createButton("Infinite Items (No Consumption)", function()
+    updateStatus("Item Consumption Disabled", Color3.fromRGB(255, 100, 100))
+    
+    -- Hook any inventory deduction
+    task.spawn(function()
+        while task.wait(0.5) do
+            pcall(function()
+                -- Prevent item consumption by maintaining count
+                if LocalPlayer:FindFirstChild("Backpack") then
+                    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
+                        if tool:IsA("Tool") and tool:FindFirstChild("Amount") then
+                            tool.Amount.Value = 999
+                        end
+                    end
+                end
+            end)
+        end
+    end)
+end)
+
+createButton("Dupe Selected Item", function()
+    if not Events then return end
+    
+    updateStatus("Attempting Item Dupe...", Color3.fromRGB(255, 200, 50))
+    
+    pcall(function()
+        local lastItem = LocalPlayer:FindFirstChild("LastSelectedItem")
+        if lastItem and lastItem.Value ~= "" then
+            -- Spam place and pickup to dupe
+            local RequestPlaceBlock = Events:FindFirstChild("RequestPlaceBlock")
+            if RequestPlaceBlock and LocalPlayer.Character then
+                local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if hrp then
+                    for i = 1, 50 do
+                        RequestPlaceBlock:FireServer(hrp.Position + Vector3.new(i, 0, 0), lastItem.Value)
+                        task.wait(0.01)
+                    end
+                    updateStatus("Dupe Attempt Complete", Color3.fromRGB(100, 255, 100))
+                end
+            end
+        end
+    end)
+end)
+
+-- ===================================
+-- SECTION 10: PLAYER TROLLING
+-- ===================================
+createSection("😈 10. Player Trolling Tools")
+
+local targetPlayer = nil
+createButton("Select Target Player (Click)", function()
+    local mouse = LocalPlayer:GetMouse()
+    updateStatus("Click on a player to target...", Color3.fromRGB(255, 200, 50))
+    
+    local connection
+    connection = mouse.Button1Down:Connect(function()
+        local target = mouse.Target
+        if target and target.Parent and target.Parent:FindFirstChild("Humanoid") then
+            local player = Players:GetPlayerFromCharacter(target.Parent)
+            if player then
+                targetPlayer = player
+                updateStatus("Targeted: " .. player.Name, Color3.fromRGB(255, 100, 100))
+                connection:Disconnect()
+            end
+        end
+    end)
+end)
+
+createButton("Cage Target Player", function()
+    if not targetPlayer or not targetPlayer.Character then
+        updateStatus("No target selected!", Color3.fromRGB(255, 50, 50))
+        return
+    end
+    
+    if not Events then return end
+    
+    local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp and Events:FindFirstChild("RequestPlaceBlock") then
+        updateStatus("Caging " .. targetPlayer.Name, Color3.fromRGB(255, 100, 100))
+        
+        local RequestPlaceBlock = Events:FindFirstChild("RequestPlaceBlock")
+        local pos = hrp.Position
+        
+        -- Build cage around player
+        for x = -6, 6, 3 do
+            for y = -3, 9, 3 do
+                for z = -6, 6, 3 do
+                    if math.abs(x) == 6 or math.abs(z) == 6 or y == -3 or y == 9 then
+                        pcall(function()
+                            RequestPlaceBlock:FireServer(pos + Vector3.new(x, y, z), "Block")
+                        end)
+                        task.wait(0.01)
+                    end
+                end
+            end
+        end
+        updateStatus("Cage Complete!", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+createButton("Spam Blocks at Target", function()
+    if not targetPlayer or not targetPlayer.Character then
+        updateStatus("No target selected!", Color3.fromRGB(255, 50, 50))
+        return
+    end
+    
+    if not Events then return end
+    
+    local hrp = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if hrp and Events:FindFirstChild("RequestPlaceBlock") then
+        updateStatus("Spamming at " .. targetPlayer.Name, Color3.fromRGB(255, 100, 100))
+        
+        task.spawn(function()
+            for i = 1, 200 do
+                pcall(function()
+                    local RequestPlaceBlock = Events:FindFirstChild("RequestPlaceBlock")
+                    local offset = Vector3.new(math.random(-15, 15), math.random(-5, 10), math.random(-15, 15))
+                    RequestPlaceBlock:FireServer(hrp.Position + offset, "Block")
+                end)
+                task.wait(0.02)
+            end
+            updateStatus("Spam Complete!", Color3.fromRGB(100, 255, 100))
+        end)
+    end
+end)
+
+-- ===================================
+-- SECTION 11: ANTI-DETECTION
+-- ===================================
+createSection("🛡️ 11. Anti-Detection Tools")
+
+createToggle("Anti-Kick (Rejoin on Kick)", function(state)
+    if state then
+        local TeleportService = game:GetService("TeleportService")
+        game:GetService("GuiService").ErrorMessageChanged:Connect(function()
+            task.wait(1)
+            TeleportService:Teleport(game.PlaceId, LocalPlayer)
+        end)
+        updateStatus("Anti-Kick Active", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+createToggle("Hide Name Tag", function(state)
+    if LocalPlayer.Character then
+        local head = LocalPlayer.Character:FindFirstChild("Head")
+        if head then
+            for _, tag in pairs(head:GetChildren()) do
+                if tag:IsA("BillboardGui") then
+                    tag.Enabled = not state
+                end
+            end
+        end
+        updateStatus(state and "Name Hidden" or "Name Visible", 
+            state and Color3.fromRGB(100, 255, 100) or Color3.fromRGB(255, 200, 50))
+    end
+end)
+
+createButton("Clear All Connections", function()
+    -- Clear all script connections to prevent detection
+    updateStatus("Clearing connections...", Color3.fromRGB(255, 200, 50))
+    
+    pcall(function()
+        for _, connection in pairs(getconnections(game.LogService.MessageOut)) do
+            connection:Disable()
+        end
+    end)
+    
+    updateStatus("Connections Cleared", Color3.fromRGB(100, 255, 100))
+end)
+
+-- ===================================
+-- SECTION 12: WORLD MANIPULATION
+-- ===================================
+createSection("🌍 12. World Manipulation")
+
+createButton("Delete All Spawned Blocks", function()
+    updateStatus("Deleting blocks...", Color3.fromRGB(255, 100, 100))
+    
+    local count = 0
+    for _, obj in pairs(workspace:GetDescendants()) do
+        pcall(function()
+            if obj:IsA("Model") and obj:FindFirstChild("Block") then
+                obj:Destroy()
+                count = count + 1
+            end
+        end)
+    end
+    
+    updateStatus("Deleted " .. count .. " blocks", Color3.fromRGB(100, 255, 100))
+end)
+
+createButton("Steal All Floating Items", function()
+    updateStatus("Collecting items...", Color3.fromRGB(255, 200, 50))
+    
+    local FloatingObjects = workspace:FindFirstChild("FloatingObjects")
+    local FloatingGems = workspace:FindFirstChild("FloatingGems")
+    
+    if LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            if FloatingObjects then
+                for _, item in pairs(FloatingObjects:GetChildren()) do
+                    pcall(function()
+                        item.CFrame = hrp.CFrame
+                    end)
+                end
+            end
+            if FloatingGems then
+                for _, gem in pairs(FloatingGems:GetChildren()) do
+                    pcall(function()
+                        gem.CFrame = hrp.CFrame
+                    end)
+                end
+            end
+            updateStatus("Items Collected!", Color3.fromRGB(100, 255, 100))
+        end
+    end
+end)
+
+createButton("Force Respawn All Players", function()
+    if not Events then return end
+    updateStatus("Attempting mass respawn...", Color3.fromRGB(255, 100, 100))
+    
+    -- Try to trigger respawn events
+    for _, player in pairs(Players:GetPlayers()) do
+        pcall(function()
+            for _, event in pairs(Events:GetChildren()) do
+                if event:IsA("RemoteEvent") then
+                    event:FireServer("Respawn", player)
+                end
+            end
+        end)
+    end
+    
+    updateStatus("Respawn Spam Sent", Color3.fromRGB(100, 255, 100))
+end)
+
+-- ===================================
+-- SECTION 13: DEBUG & MONITORING
+-- ===================================
+createSection("🔍 13. Debug & Monitoring")
+
+createButton("Show All RemoteEvents", function()
+    print("=== REMOTE EVENTS ===")
+    local count = 0
+    for _, event in pairs(ReplicatedStorage:GetDescendants()) do
+        if event:IsA("RemoteEvent") then
+            print("📡", event:GetFullName())
+            count = count + 1
+        end
+    end
+    updateStatus("Found " .. count .. " RemoteEvents (check console)", Color3.fromRGB(100, 255, 100))
+end)
+
+createButton("Monitor All FireServer Calls", function()
+    updateStatus("Monitoring active (check console)", Color3.fromRGB(255, 200, 50))
+    
+    local mt = getrawmetatable(game)
+    local oldNamecall = mt.__namecall
+    
+    setreadonly(mt, false)
+    mt.__namecall = newcclosure(function(self, ...)
+        local args = {...}
+        local method = getnamecallmethod()
+        
+        if method == "FireServer" then
+            print("🔥 FireServer:", self:GetFullName())
+            print("   Args:", unpack(args))
+        end
+        
+        return oldNamecall(self, ...)
+    end)
+    setreadonly(mt, true)
+end)
+
+local espEnabled = false
+createToggle("Player ESP (Wallhack)", function(state)
+    espEnabled = state
+    
+    if state then
+        local function createESP(player)
+            if player == LocalPlayer then return end
+            if not player.Character then return end
+            
+            local hrp = player.Character:FindFirstChild("HumanoidRootPart")
+            if not hrp then return end
+            
+            local box = Instance.new("BoxHandleAdornment")
+            box.Name = "ESP"
+            box.Size = Vector3.new(4, 5, 1)
+            box.Color3 = Color3.fromRGB(255, 0, 0)
+            box.Transparency = 0.7
+            box.AlwaysOnTop = true
+            box.ZIndex = 10
+            box.Adornee = hrp
+            box.Parent = hrp
+        end
+        
+        for _, player in pairs(Players:GetPlayers()) do
+            createESP(player)
+        end
+        
+        Players.PlayerAdded:Connect(createESP)
+        updateStatus("ESP Enabled", Color3.fromRGB(255, 100, 100))
+    else
+        for _, player in pairs(Players:GetPlayers()) do
+            if player.Character then
+                for _, part in pairs(player.Character:GetDescendants()) do
+                    if part.Name == "ESP" then
+                        part:Destroy()
+                    end
+                end
+            end
+        end
+        updateStatus("ESP Disabled", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+-- ===================================
+-- SECTION 14: MISC EXPLOITS
+-- ===================================
+createSection("🎲 14. Miscellaneous Exploits")
+
+createButton("Crash Local Client (Test)", function()
+    warn("⚠️ This will crash your client!")
+    task.wait(2)
+    
+    -- Infinite loop to crash
+    while true do
+        Instance.new("Part", workspace)
+    end
+end)
+
+createButton("Forcefield Effect", function()
+    if LocalPlayer.Character then
+        local ff = Instance.new("ForceField")
+        ff.Visible = true
+        ff.Parent = LocalPlayer.Character
+        updateStatus("Forcefield Added (Visual)", Color3.fromRGB(100, 255, 100))
+    end
+end)
+
+createButton("Explode Character", function()
+    if LocalPlayer.Character then
+        local hrp = LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+        if hrp then
+            local explosion = Instance.new("Explosion")
+            explosion.Position = hrp.Position
+            explosion.BlastRadius = 30
+            explosion.BlastPressure = 500000
+            explosion.Parent = workspace
+            updateStatus("BOOM!", Color3.fromRGB(255, 100, 0))
+        end
+    end
+end)
+
+createButton("Spam Chat Messages", function()
+    updateStatus("Spamming chat...", Color3.fromRGB(255, 100, 100))
+    
+    task.spawn(function()
+        for i = 1, 20 do
+            game:GetService("ReplicatedStorage").DefaultChatSystemChatEvents.SayMessageRequest:FireServer(
+                "Exploited by VulnHub " .. i,
+                "All"
+            )
+            task.wait(0.5)
+        end
+        updateStatus("Chat Spam Complete", Color3.fromRGB(100, 255, 100))
+    end)
+end)
+
+-- ===================================
+-- SECTION 15: CREDITS & INFO
+-- ===================================
+createSection("ℹ️ 15. Information")
+
+local InfoFrame = Instance.new("Frame")
+InfoFrame.Size = UDim2.new(1, -10, 0, 120)
+InfoFrame.Position = UDim2.new(0, 5, 0, yOffset)
+InfoFrame.BackgroundColor3 = Color3.fromRGB(50, 50, 55)
+InfoFrame.BorderSizePixel = 0
+InfoFrame.Parent = ScrollFrame
+
+local InfoCorner = Instance.new("UICorner")
+InfoCorner.CornerRadius = UDim.new(0, 8)
+InfoCorner.Parent = InfoFrame
+
+local InfoText = Instance.new("TextLabel")
+InfoText.Size = UDim2.new(1, -20, 1, -10)
+InfoText.Position = UDim2.new(0, 10, 0, 5)
+InfoText.BackgroundTransparency = 1
+InfoText.Text = [[
+⚠️ EDUCATIONAL PURPOSE ONLY ⚠️
+
+This GUI demonstrates vulnerabilities in
+client-sided game logic. Do NOT use this
+to ruin other players' experiences.
+
+Vulnerabilities Demonstrated:
+• Client-side authority
+• Insufficient server validation
+• Insecure admin checks
+• Rate limiting bypass
+• Input manipulation
+• Raycast exploitation
+
+Created for: Security Research
+Use responsibly and ethically!
+]]
+InfoText.TextColor3 = Color3.fromRGB(255, 200, 50)
+InfoText.TextSize = 10
+InfoText.TextXAlignment = Enum.TextXAlignment.Left
+InfoText.TextYAlignment = Enum.TextYAlignment.Top
+InfoText.Font = Enum.Font.Gotham
+InfoText.TextWrapped = true
+InfoText.Parent = InfoFrame
+
+yOffset = yOffset + 130
+
+createButton("❌ Destroy GUI & Clean Up", function()
+    updateStatus("Cleaning up...", Color3.fromRGB(255, 200, 50))
+    task.wait(1)
+    ScreenGui:Destroy()
+end)
+
+-- Update canvas size
+ScrollFrame.CanvasSize = UDim2.new(0, 0, 0, yOffset + 20)
+
+-- ===================================
+-- FINAL SETUP
+-- ===================================
+
+-- Notification system
+local function notify(title, text, duration)
+    local NotifFrame = Instance.new("Frame")
+    NotifFrame.Size = UDim2.new(0, 300, 0, 80)
+    NotifFrame.Position = UDim2.new(1, -320, 1, -100)
+    NotifFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 45)
+    NotifFrame.BorderSizePixel = 0
+    NotifFrame.Parent = ScreenGui
+    
+    local NotifCorner = Instance.new("UICorner")
+    NotifCorner.CornerRadius = UDim.new(0, 10)
+    NotifCorner.Parent = NotifFrame
+    
+    local NotifTitle = Instance.new("TextLabel")
+    NotifTitle.Size = UDim2.new(1, -20, 0, 25)
+    NotifTitle.Position = UDim2.new(0, 10, 0, 5)
+    NotifTitle.BackgroundTransparency = 1
+    NotifTitle.Text = title
+    NotifTitle.TextColor3 = Color3.fromRGB(255, 50, 50)
+    NotifTitle.TextSize = 14
+    NotifTitle.TextXAlignment = Enum.TextXAlignment.Left
+    NotifTitle.Font = Enum.Font.GothamBold
+    NotifTitle.Parent = NotifFrame
+    
+    local NotifText = Instance.new("TextLabel")
+    NotifText.Size = UDim2.new(1, -20, 1, -30)
+    NotifText.Position = UDim2.new(0, 10, 0, 30)
+    NotifText.BackgroundTransparency = 1
+    NotifText.Text = text
+    NotifText.TextColor3 = Color3.fromRGB(200, 200, 200)
+    NotifText.TextSize = 11
+    NotifText.TextXAlignment = Enum.TextXAlignment.Left
+    NotifText.TextYAlignment = Enum.TextYAlignment.Top
+    NotifText.Font = Enum.Font.Gotham
+    NotifText.TextWrapped = true
+    NotifText.Parent = NotifFrame
+    
+    task.delay(duration or 3, function()
+        NotifFrame:TweenPosition(UDim2.new(1, 20, 1, -100), "In", "Quad", 0.5, true, function()
+            NotifFrame:Destroy()
+        end)
+    end)
+end
+
+-- Initial notification
+notify(
+    "🔴 Exploit GUI Loaded",
+    "All vulnerabilities are now accessible. Use responsibly!",
+    5
+)
+
+-- Console output
+print("=================================")
+print("🔴 VULNERABILITY EXPLOIT GUI")
+print("=================================")
+print("Loaded successfully!")
+print("Target Game: Block-based Building Game")
+print("Vulnerabilities: 15+ Categories")
+print("⚠️ FOR EDUCATIONAL USE ONLY")
+print("=================================")
+
+-- Auto-cleanup on death
+LocalPlayer.CharacterAdded:Connect(function()
+    notify("⚠️ Character Respawned", "Some exploits may need reactivation", 3)
+end)
+
+-- Key binding to toggle GUI
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if gameProcessed then return end
+    
+    if input.KeyCode == Enum.KeyCode.RightControl then
+        MainFrame.Visible = not MainFrame.Visible
+        if MainFrame.Visible then
+            notify("👁️ GUI Shown", "Press Right Ctrl to hide", 2)
+        end
+    end
+end)
+
+-- Final status
+updateStatus("🔴 All Systems Operational", Color3.fromRGB(255, 50, 50))
