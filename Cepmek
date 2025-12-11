@@ -1,0 +1,675 @@
+-- Advanced Roblox Asset Scanner with GUI for Delta Android
+-- Compatible with Delta Executor
+
+local HttpService = game:GetService("HttpService")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local CoreGui = game:GetService("CoreGui")
+
+-- Configuration
+local CONFIG = {
+    OPENAI_API_KEY = "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",
+    OPENAI_ENDPOINT = "https://api.openai.com/v1/chat/completions",
+    MAX_WORKERS = 4,
+    SCAN_HIDDEN = true,
+    DECOMPILE_SCRIPTS = true,
+    USE_AI_ANALYSIS = false -- Set false untuk performa lebih baik di mobile
+}
+
+-- Data Storage
+local SCAN_DATA = {
+    Categories = {
+        Scripts = {},
+        LocalScripts = {},
+        ModuleScripts = {},
+        Parts = {},
+        Models = {},
+        Hidden = {},
+        Suspicious = {},
+        Other = {}
+    },
+    Statistics = {
+        TotalObjects = 0,
+        ScannedObjects = 0,
+        DecompiledScripts = 0,
+        HiddenFound = 0,
+        SuspiciousFound = 0,
+        StartTime = 0
+    },
+    DecompiledSources = {}
+}
+
+-- Utility Functions
+local function CreateNotification(title, text, duration)
+    game:GetService("StarterGui"):SetCore("SendNotification", {
+        Title = title,
+        Text = text,
+        Duration = duration or 3
+    })
+end
+
+local function IsHiddenOrSuspicious(obj)
+    local name = obj.Name:lower()
+    local patterns = {
+        "hack", "exploit", "cheat", "backdoor", "virus",
+        "inject", "script_", "__", "hidden", "bypass", "admin"
+    }
+    
+    for _, pattern in ipairs(patterns) do
+        if name:find(pattern) then
+            return true
+        end
+    end
+    
+    return name:match("[^%w%s_%-]") ~= nil
+end
+
+local function GetObjectPath(obj)
+    local path = {}
+    local current = obj
+    
+    while current and current ~= game do
+        table.insert(path, 1, current.Name)
+        current = current.Parent
+    end
+    
+    return table.concat(path, " > ")
+end
+
+local function DecompileScript(script)
+    local success, result = pcall(function()
+        if script.Source and script.Source ~= "" then
+            return script.Source
+        end
+        
+        return string.format(
+            "-- Protected Script\n-- Name: %s\n-- ClassName: %s\n-- Path: %s\n-- Disabled: %s",
+            script.Name,
+            script.ClassName,
+            GetObjectPath(script),
+            tostring(script.Disabled or false)
+        )
+    end)
+    
+    if success then
+        SCAN_DATA.Statistics.DecompiledScripts = SCAN_DATA.Statistics.DecompiledScripts + 1
+        return result
+    else
+        return "-- Decompilation failed"
+    end
+end
+
+local function CategorizeObject(obj)
+    local className = obj.ClassName
+    
+    if className == "Script" then return "Scripts"
+    elseif className == "LocalScript" then return "LocalScripts"
+    elseif className == "ModuleScript" then return "ModuleScripts"
+    elseif className == "Part" or className == "MeshPart" then return "Parts"
+    elseif className == "Model" then return "Models"
+    else return "Other"
+    end
+end
+
+local function ScanObject(obj, depth)
+    depth = depth or 0
+    if not obj or depth > 50 then return end
+    
+    SCAN_DATA.Statistics.ScannedObjects = SCAN_DATA.Statistics.ScannedObjects + 1
+    
+    local category = CategorizeObject(obj)
+    local info = {
+        Name = obj.Name,
+        ClassName = obj.ClassName,
+        Path = GetObjectPath(obj),
+        Object = obj
+    }
+    
+    if IsHiddenOrSuspicious(obj) then
+        table.insert(SCAN_DATA.Categories.Hidden, info)
+        SCAN_DATA.Statistics.HiddenFound = SCAN_DATA.Statistics.HiddenFound + 1
+    end
+    
+    if obj:IsA("LuaSourceContainer") then
+        local source = DecompileScript(obj)
+        info.Source = source
+        SCAN_DATA.DecompiledSources[obj] = source
+        
+        local suspiciousKeywords = {"require%(", "loadstring", "getfenv", "setfenv", "game%.HttpGet"}
+        for _, keyword in ipairs(suspiciousKeywords) do
+            if source:match(keyword) then
+                table.insert(SCAN_DATA.Categories.Suspicious, info)
+                SCAN_DATA.Statistics.SuspiciousFound = SCAN_DATA.Statistics.SuspiciousFound + 1
+                break
+            end
+        end
+    end
+    
+    table.insert(SCAN_DATA.Categories[category], info)
+    
+    local success, children = pcall(function()
+        return obj:GetChildren()
+    end)
+    
+    if success then
+        for _, child in ipairs(children) do
+            ScanObject(child, depth + 1)
+        end
+    end
+end
+
+-- Create GUI
+local function CreateGUI()
+    -- Main ScreenGui
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "AssetScannerGUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    
+    -- Try to parent to CoreGui, fallback to PlayerGui
+    pcall(function()
+        ScreenGui.Parent = CoreGui
+    end)
+    if not ScreenGui.Parent then
+        ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+    
+    -- Main Frame
+    local MainFrame = Instance.new("Frame")
+    MainFrame.Name = "MainFrame"
+    MainFrame.Size = UDim2.new(0, 450, 0, 600)
+    MainFrame.Position = UDim2.new(0.5, -225, 0.5, -300)
+    MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 30)
+    MainFrame.BorderSizePixel = 0
+    MainFrame.Parent = ScreenGui
+    
+    -- Add UICorner
+    local MainCorner = Instance.new("UICorner")
+    MainCorner.CornerRadius = UDim.new(0, 10)
+    MainCorner.Parent = MainFrame
+    
+    -- Add UIStroke
+    local MainStroke = Instance.new("UIStroke")
+    MainStroke.Color = Color3.fromRGB(60, 60, 70)
+    MainStroke.Thickness = 2
+    MainStroke.Parent = MainFrame
+    
+    -- Title Bar
+    local TitleBar = Instance.new("Frame")
+    TitleBar.Name = "TitleBar"
+    TitleBar.Size = UDim2.new(1, 0, 0, 40)
+    TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+    TitleBar.BorderSizePixel = 0
+    TitleBar.Parent = MainFrame
+    
+    local TitleCorner = Instance.new("UICorner")
+    TitleCorner.CornerRadius = UDim.new(0, 10)
+    TitleCorner.Parent = TitleBar
+    
+    local TitleLabel = Instance.new("TextLabel")
+    TitleLabel.Size = UDim2.new(1, -100, 1, 0)
+    TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+    TitleLabel.BackgroundTransparency = 1
+    TitleLabel.Text = "🔍 Asset Scanner Pro"
+    TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+    TitleLabel.TextSize = 18
+    TitleLabel.Font = Enum.Font.GothamBold
+    TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    TitleLabel.Parent = TitleBar
+    
+    -- Close Button
+    local CloseButton = Instance.new("TextButton")
+    CloseButton.Size = UDim2.new(0, 35, 0, 35)
+    CloseButton.Position = UDim2.new(1, -40, 0, 2.5)
+    CloseButton.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    CloseButton.Text = "✕"
+    CloseButton.TextColor3 = Color3.white()
+    CloseButton.TextSize = 20
+    CloseButton.Font = Enum.Font.GothamBold
+    CloseButton.Parent = TitleBar
+    
+    local CloseCorner = Instance.new("UICorner")
+    CloseCorner.CornerRadius = UDim.new(0, 8)
+    CloseCorner.Parent = CloseButton
+    
+    CloseButton.MouseButton1Click:Connect(function()
+        ScreenGui:Destroy()
+    end)
+    
+    -- Stats Frame
+    local StatsFrame = Instance.new("Frame")
+    StatsFrame.Name = "StatsFrame"
+    StatsFrame.Size = UDim2.new(1, -20, 0, 100)
+    StatsFrame.Position = UDim2.new(0, 10, 0, 50)
+    StatsFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    StatsFrame.BorderSizePixel = 0
+    StatsFrame.Parent = MainFrame
+    
+    local StatsCorner = Instance.new("UICorner")
+    StatsCorner.CornerRadius = UDim.new(0, 8)
+    StatsCorner.Parent = StatsFrame
+    
+    local StatsText = Instance.new("TextLabel")
+    StatsText.Name = "StatsText"
+    StatsText.Size = UDim2.new(1, -20, 1, -20)
+    StatsText.Position = UDim2.new(0, 10, 0, 10)
+    StatsText.BackgroundTransparency = 1
+    StatsText.Text = "📊 Statistics\n\nTotal: 0 | Scanned: 0\nScripts: 0 | Hidden: 0 | Suspicious: 0"
+    StatsText.TextColor3 = Color3.fromRGB(200, 200, 220)
+    StatsText.TextSize = 14
+    StatsText.Font = Enum.Font.Gotham
+    StatsText.TextXAlignment = Enum.TextXAlignment.Left
+    StatsText.TextYAlignment = Enum.TextYAlignment.Top
+    StatsText.Parent = StatsFrame
+    
+    -- Control Buttons Frame
+    local ControlFrame = Instance.new("Frame")
+    ControlFrame.Size = UDim2.new(1, -20, 0, 50)
+    ControlFrame.Position = UDim2.new(0, 10, 0, 160)
+    ControlFrame.BackgroundTransparency = 1
+    ControlFrame.Parent = MainFrame
+    
+    -- Scan Button
+    local ScanButton = Instance.new("TextButton")
+    ScanButton.Size = UDim2.new(0.48, 0, 1, 0)
+    ScanButton.Position = UDim2.new(0, 0, 0, 0)
+    ScanButton.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
+    ScanButton.Text = "🔍 Start Scan"
+    ScanButton.TextColor3 = Color3.white()
+    ScanButton.TextSize = 16
+    ScanButton.Font = Enum.Font.GothamBold
+    ScanButton.Parent = ControlFrame
+    
+    local ScanCorner = Instance.new("UICorner")
+    ScanCorner.CornerRadius = UDim.new(0, 8)
+    ScanCorner.Parent = ScanButton
+    
+    -- Clear Button
+    local ClearButton = Instance.new("TextButton")
+    ClearButton.Size = UDim2.new(0.48, 0, 1, 0)
+    ClearButton.Position = UDim2.new(0.52, 0, 0, 0)
+    ClearButton.BackgroundColor3 = Color3.fromRGB(255, 100, 100)
+    ClearButton.Text = "🗑️ Clear"
+    ClearButton.TextColor3 = Color3.white()
+    ClearButton.TextSize = 16
+    ClearButton.Font = Enum.Font.GothamBold
+    ClearButton.Parent = ControlFrame
+    
+    local ClearCorner = Instance.new("UICorner")
+    ClearCorner.CornerRadius = UDim.new(0, 8)
+    ClearCorner.Parent = ClearButton
+    
+    -- Category List
+    local CategoryFrame = Instance.new("ScrollingFrame")
+    CategoryFrame.Name = "CategoryFrame"
+    CategoryFrame.Size = UDim2.new(1, -20, 0, 330)
+    CategoryFrame.Position = UDim2.new(0, 10, 0, 220)
+    CategoryFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 40)
+    CategoryFrame.BorderSizePixel = 0
+    CategoryFrame.ScrollBarThickness = 6
+    CategoryFrame.CanvasSize = UDim2.new(0, 0, 0, 0)
+    CategoryFrame.Parent = MainFrame
+    
+    local CategoryCorner = Instance.new("UICorner")
+    CategoryCorner.CornerRadius = UDim.new(0, 8)
+    CategoryCorner.Parent = CategoryFrame
+    
+    local CategoryList = Instance.new("UIListLayout")
+    CategoryList.Padding = UDim.new(0, 5)
+    CategoryList.Parent = CategoryFrame
+    
+    -- Script Viewer Frame (Hidden by default)
+    local ViewerFrame = Instance.new("Frame")
+    ViewerFrame.Name = "ViewerFrame"
+    ViewerFrame.Size = UDim2.new(0, 500, 0, 500)
+    ViewerFrame.Position = UDim2.new(0.5, -250, 0.5, -250)
+    ViewerFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
+    ViewerFrame.BorderSizePixel = 0
+    ViewerFrame.Visible = false
+    ViewerFrame.Parent = ScreenGui
+    
+    local ViewerCorner = Instance.new("UICorner")
+    ViewerCorner.CornerRadius = UDim.new(0, 10)
+    ViewerCorner.Parent = ViewerFrame
+    
+    local ViewerStroke = Instance.new("UIStroke")
+    ViewerStroke.Color = Color3.fromRGB(70, 130, 255)
+    ViewerStroke.Thickness = 3
+    ViewerStroke.Parent = ViewerFrame
+    
+    -- Viewer Title
+    local ViewerTitle = Instance.new("TextLabel")
+    ViewerTitle.Size = UDim2.new(1, -50, 0, 35)
+    ViewerTitle.Position = UDim2.new(0, 10, 0, 5)
+    ViewerTitle.BackgroundTransparency = 1
+    ViewerTitle.Text = "📝 Script Viewer"
+    ViewerTitle.TextColor3 = Color3.fromRGB(70, 130, 255)
+    ViewerTitle.TextSize = 18
+    ViewerTitle.Font = Enum.Font.GothamBold
+    ViewerTitle.TextXAlignment = Enum.TextXAlignment.Left
+    ViewerTitle.Parent = ViewerFrame
+    
+    -- Viewer Close Button
+    local ViewerClose = Instance.new("TextButton")
+    ViewerClose.Size = UDim2.new(0, 35, 0, 35)
+    ViewerClose.Position = UDim2.new(1, -40, 0, 2.5)
+    ViewerClose.BackgroundColor3 = Color3.fromRGB(220, 50, 50)
+    ViewerClose.Text = "✕"
+    ViewerClose.TextColor3 = Color3.white()
+    ViewerClose.TextSize = 20
+    ViewerClose.Font = Enum.Font.GothamBold
+    ViewerClose.Parent = ViewerFrame
+    
+    local ViewerCloseCorner = Instance.new("UICorner")
+    ViewerCloseCorner.CornerRadius = UDim.new(0, 8)
+    ViewerCloseCorner.Parent = ViewerClose
+    
+    ViewerClose.MouseButton1Click:Connect(function()
+        ViewerFrame.Visible = false
+    end)
+    
+    -- Code Display
+    local CodeScroll = Instance.new("ScrollingFrame")
+    CodeScroll.Size = UDim2.new(1, -20, 1, -90)
+    CodeScroll.Position = UDim2.new(0, 10, 0, 45)
+    CodeScroll.BackgroundColor3 = Color3.fromRGB(15, 15, 20)
+    CodeScroll.BorderSizePixel = 0
+    CodeScroll.ScrollBarThickness = 8
+    CodeScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
+    CodeScroll.Parent = ViewerFrame
+    
+    local CodeCorner = Instance.new("UICorner")
+    CodeCorner.CornerRadius = UDim.new(0, 8)
+    CodeCorner.Parent = CodeScroll
+    
+    local CodeText = Instance.new("TextLabel")
+    CodeText.Name = "CodeText"
+    CodeText.Size = UDim2.new(1, -20, 1, 0)
+    CodeText.Position = UDim2.new(0, 10, 0, 10)
+    CodeText.BackgroundTransparency = 1
+    CodeText.Text = ""
+    CodeText.TextColor3 = Color3.fromRGB(220, 220, 255)
+    CodeText.TextSize = 13
+    CodeText.Font = Enum.Font.Code
+    CodeText.TextXAlignment = Enum.TextXAlignment.Left
+    CodeText.TextYAlignment = Enum.TextYAlignment.Top
+    CodeText.TextWrapped = true
+    CodeText.Parent = CodeScroll
+    
+    -- Copy Button
+    local CopyButton = Instance.new("TextButton")
+    CopyButton.Size = UDim2.new(0, 120, 0, 35)
+    CopyButton.Position = UDim2.new(0.5, -60, 1, -40)
+    CopyButton.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
+    CopyButton.Text = "📋 Copy Code"
+    CopyButton.TextColor3 = Color3.white()
+    CopyButton.TextSize = 14
+    CopyButton.Font = Enum.Font.GothamBold
+    CopyButton.Parent = ViewerFrame
+    
+    local CopyCorner = Instance.new("UICorner")
+    CopyCorner.CornerRadius = UDim.new(0, 8)
+    CopyCorner.Parent = CopyButton
+    
+    -- Functions
+    local function UpdateStats()
+        StatsText.Text = string.format(
+            "📊 Statistics\n\n" ..
+            "Total: %d | Scanned: %d\n" ..
+            "Scripts: %d | Hidden: %d | Suspicious: %d",
+            SCAN_DATA.Statistics.TotalObjects,
+            SCAN_DATA.Statistics.ScannedObjects,
+            SCAN_DATA.Statistics.DecompiledScripts,
+            SCAN_DATA.Statistics.HiddenFound,
+            SCAN_DATA.Statistics.SuspiciousFound
+        )
+    end
+    
+    local function CreateCategoryButton(categoryName, items)
+        local Button = Instance.new("TextButton")
+        Button.Size = UDim2.new(1, -10, 0, 45)
+        Button.BackgroundColor3 = Color3.fromRGB(40, 40, 50)
+        Button.Text = string.format("%s (%d)", categoryName, #items)
+        Button.TextColor3 = Color3.fromRGB(200, 200, 220)
+        Button.TextSize = 14
+        Button.Font = Enum.Font.GothamBold
+        Button.Parent = CategoryFrame
+        
+        local ButtonCorner = Instance.new("UICorner")
+        ButtonCorner.CornerRadius = UDim.new(0, 6)
+        ButtonCorner.Parent = Button
+        
+        Button.MouseButton1Click:Connect(function()
+            -- Clear previous items
+            for _, child in ipairs(CategoryFrame:GetChildren()) do
+                if child:IsA("Frame") and child.Name == "ItemFrame" then
+                    child:Destroy()
+                end
+            end
+            
+            -- Show items
+            for i, item in ipairs(items) do
+                local ItemFrame = Instance.new("Frame")
+                ItemFrame.Name = "ItemFrame"
+                ItemFrame.Size = UDim2.new(1, -10, 0, 70)
+                ItemFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 45)
+                ItemFrame.Parent = CategoryFrame
+                
+                local ItemCorner = Instance.new("UICorner")
+                ItemCorner.CornerRadius = UDim.new(0, 6)
+                ItemCorner.Parent = ItemFrame
+                
+                local ItemName = Instance.new("TextLabel")
+                ItemName.Size = UDim2.new(1, -100, 0, 20)
+                ItemName.Position = UDim2.new(0, 10, 0, 5)
+                ItemName.BackgroundTransparency = 1
+                ItemName.Text = "📄 " .. item.Name
+                ItemName.TextColor3 = Color3.fromRGB(255, 255, 255)
+                ItemName.TextSize = 13
+                ItemName.Font = Enum.Font.GothamBold
+                ItemName.TextXAlignment = Enum.TextXAlignment.Left
+                ItemName.Parent = ItemFrame
+                
+                local ItemPath = Instance.new("TextLabel")
+                ItemPath.Size = UDim2.new(1, -100, 0, 15)
+                ItemPath.Position = UDim2.new(0, 10, 0, 25)
+                ItemPath.BackgroundTransparency = 1
+                ItemPath.Text = item.Path or "N/A"
+                ItemPath.TextColor3 = Color3.fromRGB(150, 150, 170)
+                ItemPath.TextSize = 10
+                ItemPath.Font = Enum.Font.Gotham
+                ItemPath.TextXAlignment = Enum.TextXAlignment.Left
+                ItemPath.TextTruncate = Enum.TextTruncate.AtEnd
+                ItemPath.Parent = ItemFrame
+                
+                -- View Button (only for scripts)
+                if item.Source then
+                    local ViewBtn = Instance.new("TextButton")
+                    ViewBtn.Size = UDim2.new(0, 80, 0, 30)
+                    ViewBtn.Position = UDim2.new(1, -85, 0, 5)
+                    ViewBtn.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
+                    ViewBtn.Text = "👁️ View"
+                    ViewBtn.TextColor3 = Color3.white()
+                    ViewBtn.TextSize = 12
+                    ViewBtn.Font = Enum.Font.GothamBold
+                    ViewBtn.Parent = ItemFrame
+                    
+                    local ViewCorner = Instance.new("UICorner")
+                    ViewCorner.CornerRadius = UDim.new(0, 6)
+                    ViewCorner.Parent = ViewBtn
+                    
+                    ViewBtn.MouseButton1Click:Connect(function()
+                        ViewerTitle.Text = "📝 " .. item.Name
+                        CodeText.Text = item.Source
+                        
+                        -- Auto-size text
+                        local textBounds = CodeText.TextBounds
+                        CodeText.Size = UDim2.new(1, -20, 0, textBounds.Y + 20)
+                        CodeScroll.CanvasSize = UDim2.new(0, 0, 0, textBounds.Y + 40)
+                        
+                        ViewerFrame.Visible = true
+                    end)
+                end
+                
+                local ItemClass = Instance.new("TextLabel")
+                ItemClass.Size = UDim2.new(1, -10, 0, 15)
+                ItemClass.Position = UDim2.new(0, 10, 0, 45)
+                ItemClass.BackgroundTransparency = 1
+                ItemClass.Text = "Type: " .. item.ClassName
+                ItemClass.TextColor3 = Color3.fromRGB(120, 180, 255)
+                ItemClass.TextSize = 10
+                ItemClass.Font = Enum.Font.Gotham
+                ItemClass.TextXAlignment = Enum.TextXAlignment.Left
+                ItemClass.Parent = ItemFrame
+            end
+            
+            -- Update canvas size
+            CategoryFrame.CanvasSize = UDim2.new(0, 0, 0, CategoryList.AbsoluteContentSize.Y + 10)
+        end)
+        
+        return Button
+    end
+    
+    local function PopulateCategories()
+        -- Clear existing
+        for _, child in ipairs(CategoryFrame:GetChildren()) do
+            if child:IsA("TextButton") or child:IsA("Frame") then
+                child:Destroy()
+            end
+        end
+        
+        -- Add categories
+        for categoryName, items in pairs(SCAN_DATA.Categories) do
+            if #items > 0 then
+                CreateCategoryButton(categoryName, items)
+            end
+        end
+        
+        CategoryFrame.CanvasSize = UDim2.new(0, 0, 0, CategoryList.AbsoluteContentSize.Y + 10)
+    end
+    
+    -- Scan Button Click
+    ScanButton.MouseButton1Click:Connect(function()
+        ScanButton.Text = "⏳ Scanning..."
+        ScanButton.BackgroundColor3 = Color3.fromRGB(255, 165, 0)
+        
+        -- Reset data
+        for category, _ in pairs(SCAN_DATA.Categories) do
+            SCAN_DATA.Categories[category] = {}
+        end
+        SCAN_DATA.Statistics = {
+            TotalObjects = 0,
+            ScannedObjects = 0,
+            DecompiledScripts = 0,
+            HiddenFound = 0,
+            SuspiciousFound = 0,
+            StartTime = tick()
+        }
+        SCAN_DATA.DecompiledSources = {}
+        
+        CreateNotification("Scanner", "Scan started!", 2)
+        
+        spawn(function()
+            -- Count objects
+            local function countObjects(obj)
+                local count = 1
+                for _, child in ipairs(obj:GetChildren()) do
+                    count = count + countObjects(child)
+                end
+                return count
+            end
+            
+            SCAN_DATA.Statistics.TotalObjects = countObjects(workspace)
+            
+            -- Scan
+            ScanObject(workspace)
+            
+            -- Update UI
+            UpdateStats()
+            PopulateCategories()
+            
+            local elapsed = tick() - SCAN_DATA.Statistics.StartTime
+            
+            ScanButton.Text = "✅ Scan Complete"
+            ScanButton.BackgroundColor3 = Color3.fromRGB(70, 200, 100)
+            
+            wait(2)
+            ScanButton.Text = "🔍 Start Scan"
+            ScanButton.BackgroundColor3 = Color3.fromRGB(70, 130, 255)
+            
+            CreateNotification("Scanner", string.format("Scan complete! %.2fs", elapsed), 3)
+        end)
+    end)
+    
+    -- Clear Button Click
+    ClearButton.MouseButton1Click:Connect(function()
+        for category, _ in pairs(SCAN_DATA.Categories) do
+            SCAN_DATA.Categories[category] = {}
+        end
+        SCAN_DATA.Statistics = {
+            TotalObjects = 0,
+            ScannedObjects = 0,
+            DecompiledScripts = 0,
+            HiddenFound = 0,
+            SuspiciousFound = 0,
+            StartTime = 0
+        }
+        
+        UpdateStats()
+        
+        for _, child in ipairs(CategoryFrame:GetChildren()) do
+            if child:IsA("TextButton") or child:IsA("Frame") then
+                child:Destroy()
+            end
+        end
+        
+        CreateNotification("Scanner", "Data cleared!", 2)
+    end)
+    
+    -- Copy Button Click
+    CopyButton.MouseButton1Click:Connect(function()
+        pcall(function()
+            setclipboard(CodeText.Text)
+            CreateNotification("Scanner", "Code copied to clipboard!", 2)
+            CopyButton.Text = "✅ Copied!"
+            wait(1.5)
+            CopyButton.Text = "📋 Copy Code"
+        end)
+    end)
+    
+    -- Make draggable
+    local dragging, dragInput, dragStart, startPos
+    
+    TitleBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = MainFrame.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    TitleBar.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+    
+    CreateNotification("Asset Scanner", "GUI Loaded! Click 'Start Scan' to begin", 3)
+end
+
+-- Initialize
+CreateGUI()
+CreateNotification("Asset Scanner Pro", "Ready to scan!", 2)
